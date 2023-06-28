@@ -1,13 +1,26 @@
 import time
 import os
+from typing import Literal
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from torchvision import datasets, transforms
 from scipy.ndimage.interpolation import rotate as scipyrotate
-from networks import MLP, ConvNet, LeNet, AlexNet, AlexNetBN, VGG11, VGG11BN, ResNet18, ResNet18BN_AP, ResNet18BN
+from networks import (
+    MLP, 
+    ConvNet, 
+    LeNet, 
+    AlexNet, 
+    AlexNetBN, 
+    VGG11, 
+    VGG11BN, 
+    ResNet18, 
+    ResNet18BN_AP, 
+    ResNet18BN,
+    LeNet5
+)
 
 def get_dataset(dataset, data_path):
     if dataset == 'MNIST':
@@ -131,6 +144,8 @@ def get_network(model, channel, num_classes, im_size=(32, 32)):
         net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act=net_act, net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
     elif model == 'LeNet':
         net = LeNet(channel=channel, num_classes=num_classes)
+    elif model == 'LeNet5':
+        net = LeNet5(channel=channel, num_classes=num_classes)
     elif model == 'AlexNet':
         net = AlexNet(channel=channel, num_classes=num_classes)
     elif model == 'AlexNetBN':
@@ -294,7 +309,14 @@ def get_loops(ipc):
 
 
 
-def epoch(mode, dataloader, net, optimizer, criterion, args, aug):
+def epoch(
+        mode: Literal['train', 'test'], 
+        dataloader: DataLoader, 
+        net: nn.Module, 
+        optimizer: torch.optim.Optimizer, 
+        criterion: nn.Module, 
+        args, 
+        aug):
     loss_avg, acc_avg, num_exp = 0, 0, 0
     net = net.to(args.device)
     criterion = criterion.to(args.device)
@@ -331,7 +353,6 @@ def epoch(mode, dataloader, net, optimizer, criterion, args, aug):
     acc_avg /= num_exp
 
     return loss_avg, acc_avg
-
 
 
 def evaluate_synset(it_eval, net, images_train, labels_train, testloader, args):
