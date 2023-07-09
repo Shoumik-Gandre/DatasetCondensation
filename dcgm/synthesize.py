@@ -56,7 +56,7 @@ class DCGMSynthesizer:
 
         for iteration in tqdm(range(self.hyperparams.iterations), desc=" iterations", position=0):
             
-            model: nn.Module = self.model_init_strategy.init()  # TODO: write a function to assign a model
+            model: nn.Module = self.model_init_strategy.init().to(self.device)  # TODO: write a function to assign a model
             model_params = list(model.parameters())
             model_optimizer = torch.optim.SGD(model.parameters(), lr=self.hyperparams.lr_nn)
 
@@ -203,12 +203,6 @@ def run(
     model = LeNet5(1, 10)
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
-    gpu_num = torch.cuda.device_count()
-    if gpu_num>0:
-        device = 'cuda'
-        if gpu_num>1:
-            model = nn.DataParallel(model)
-    else:
-        device = 'cpu'
+    model = nn.DataParallel(model)
     model = model.to(device)
     train(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, eval_dataloader, 300, device)
