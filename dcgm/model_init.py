@@ -22,7 +22,7 @@ class HomogenousModelInitStrategy(ModelInitStrategy):
     
     def init(self) -> nn.Module:
         ''' initialize the model '''
-        return self.model_class(**self.model_args)
+        return nn.DataParallel(self.model_class(**self.model_args))
     
 
 @dataclass
