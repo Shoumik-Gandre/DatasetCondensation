@@ -54,7 +54,7 @@ class DCGMSynthesizer:
         criterion = nn.CrossEntropyLoss()
 
         for iteration in range(self.hyperparams.iterations):
-            model: nn.Module = LeNet5(self.dimensions[0], num_classes=self.num_labels).to(self.device)  # TODO: write a function to assign a model
+            model: nn.Module = LeNet5(1, num_classes=10).to(self.device)  # TODO: write a function to assign a model
             model_params = list(model.parameters())
             model_optimizer = torch.optim.SGD(model.parameters(), lr=self.hyperparams.lr_nn)
 
