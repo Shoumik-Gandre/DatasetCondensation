@@ -54,13 +54,13 @@ class DCGMSynthesizer:
         # * loss function computed on the model
         criterion = nn.CrossEntropyLoss()
 
-        for iteration in tqdm(range(self.hyperparams.iterations), desc=" iterations", position=0, leave=False):
+        for iteration in tqdm(range(self.hyperparams.iterations), desc=" iterations", position=0):
             
             model: nn.Module = self.model_init_strategy.init().to(self.device)  # TODO: write a function to assign a model
             model_params = list(model.parameters())
             model_optimizer = torch.optim.SGD(model.parameters(), lr=self.hyperparams.lr_nn)
 
-            for eta_data in tqdm(range(self.hyperparams.outer_loops), desc=" outer loops", position=1, leave=False):
+            for eta_data in range(self.hyperparams.outer_loops):
 
                 # [HANDLE BATCHNORMALIZATION]
                 # detect batchnormalization
