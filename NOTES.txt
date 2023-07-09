@@ -1,0 +1,2 @@
+LeNet5 with ipc 50 on MNIST:
+Evaluate 5 random LeNet5, mean = 0.9771 std = 0.0015
