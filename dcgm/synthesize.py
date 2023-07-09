@@ -62,10 +62,10 @@ class DCGMSynthesizer:
                 
                 # [HANDLE BATCHNORMALIZATION]
                 # detect batchnormalization
-                if has_batchnormalization(model):
-                    # Upon detection, we need to obtain batchnorm statistics from real data
-                    update_batchnorm_statistics(model, real_dataset_labelwise, self.hyperparams.batchnorm_batchsize_perclass)
-                    fix_batchnormalization_statistics(model)
+                # if has_batchnormalization(model):
+                #     # Upon detection, we need to obtain batchnorm statistics from real data
+                #     update_batchnorm_statistics(model, real_dataset_labelwise, self.hyperparams.batchnorm_batchsize_perclass)
+                #     fix_batchnormalization_statistics(model)
 
                 gradient_distance = torch.tensor(0.0).to(self.device)
                 for label in range(self.num_labels):
@@ -87,7 +87,7 @@ class DCGMSynthesizer:
                     print(out.shape)
                     loss_real = criterion(out, labels_real.to(self.device))
                     gw_real = torch.autograd.grad(loss_real, model_params)
-                    gw_real = tuple(gradients.detach().clone() for gradients in gw_real)
+                    gw_real = tuple(gradients.detach() for gradients in gw_real)
 
                     loss_syn = criterion(model(inputs_syn.to(self.device)), labels_syn.to(self.device))
                     gw_syn = torch.autograd.grad(loss_syn, model_params, create_graph=True)
@@ -143,7 +143,7 @@ def run(
         download=True,
         transform=transforms.Compose([ 
                         # transforms.Grayscale(num_output_channels=3), 
-                        transforms.Resize((28, 28)),
+                        transforms.Resize((32, 32)),
                         transforms.ToTensor(),
                         transforms.Normalize((0.1307,), (0.3081,)),
                     ]), 
@@ -155,7 +155,7 @@ def run(
         download=True,
         transform=transforms.Compose([ 
                         # transforms.Grayscale(num_output_channels=3), 
-                        transforms.Resize((28, 28)),
+                        transforms.Resize((32, 32)),
                         transforms.ToTensor(),
                         transforms.Normalize((0.1307,), (0.3081,)),
                     ]), 
@@ -172,14 +172,14 @@ def run(
     )
 
     dataset_init_strategy = RandomStratifiedInitStrategy(
-        dimensions=(1, 28, 28), 
+        dimensions=(1, 32, 32), 
         num_classes=10, 
         ipc=1, 
         device=device
     )
 
     synthesizer = DCGMSynthesizer(
-        dimensions=(1, 28, 28),
+        dimensions=(1, 32, 32),
         num_labels=10,
         dataset=train_dataset,
         device=device,
