@@ -77,16 +77,16 @@ class DCGMSynthesizer:
                         real_dataset_labelwise[label], 
                         batch_size=self.hyperparams.batch_size
                     )
-                    # dataloader_syn = DataLoader(
-                    #     syn_dataset, 
-                    #     batch_size=self.hyperparams.ipc, 
-                    #     sampler=SubsetRandomSampler(
-                    #         indices=range(
-                    #             self.hyperparams.ipc * (label), 
-                    #             self.hyperparams.ipc * (label + 1)
-                    #         )
-                    #     )
-                    # )
+                    dataloader_syn = DataLoader(
+                        syn_dataset, 
+                        batch_size=self.hyperparams.ipc, 
+                        sampler=SubsetRandomSampler(
+                            indices=range(
+                                self.hyperparams.ipc * (label), 
+                                self.hyperparams.ipc * (label + 1)
+                            )
+                        )
+                    )
                     # Compute real Gradients
                     inputs_real, labels_real = next(iter(dataloader_real))
                     inputs_real = inputs_real.to(self.device)
@@ -97,9 +97,9 @@ class DCGMSynthesizer:
                     gw_real = (gradients.detach() for gradients in gw_real)
                     
                     # Compute Synthetic Gradients
-                    # inputs_syn, labels_syn = next(iter(dataloader_syn))
-                    inputs_syn = syn_dataset.tensors[0][self.hyperparams.ipc * (label): self.hyperparams.ipc * (label + 1)]
-                    labels_syn = syn_dataset.tensors[1][self.hyperparams.ipc * (label): self.hyperparams.ipc * (label + 1)]
+                    inputs_syn, labels_syn = next(iter(dataloader_syn))
+                    # inputs_syn = syn_dataset.tensors[0][self.hyperparams.ipc * (label): self.hyperparams.ipc * (label + 1)]
+                    # labels_syn = syn_dataset.tensors[1][self.hyperparams.ipc * (label): self.hyperparams.ipc * (label + 1)]
 
                     inputs_syn = inputs_syn.to(self.device)
                     labels_syn = labels_syn.to(self.device)
