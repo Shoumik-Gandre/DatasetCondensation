@@ -167,7 +167,7 @@ def run(
                         transforms.Normalize((0.1307,), (0.3081,)),
                     ]), 
     )
-    real_images = torch.vstack([train_data[0] for train_data in train_dataset])
+    real_images = torch.stack([train_data[0] for train_data in train_dataset])
     real_labels = torch.tensor([train_data[1] for train_data in train_dataset], dtype=torch.long)
 
     train_dataset = TensorDataset(real_images, real_labels)
