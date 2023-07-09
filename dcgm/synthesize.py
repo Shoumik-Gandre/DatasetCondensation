@@ -62,10 +62,10 @@ class DCGMSynthesizer:
                 
                 # [HANDLE BATCHNORMALIZATION]
                 # detect batchnormalization
-                # if has_batchnormalization(model):
-                #     # Upon detection, we need to obtain batchnorm statistics from real data
-                #     update_batchnorm_statistics(model, real_dataset_labelwise, self.hyperparams.batchnorm_batchsize_perclass)
-                #     fix_batchnormalization_statistics(model)
+                if has_batchnormalization(model):
+                    # Upon detection, we need to obtain batchnorm statistics from real data
+                    update_batchnorm_statistics(model, real_dataset_labelwise, self.hyperparams.batchnorm_batchsize_perclass)
+                    fix_batchnormalization_statistics(model)
 
                 gradient_distance = torch.tensor(0.0).to(self.device)
                 for label in range(self.num_labels):
@@ -83,11 +83,8 @@ class DCGMSynthesizer:
                     inputs_real, labels_real = next(iter(dataloader_real))
                     inputs_real = inputs_real.to(self.device)
                     labels_real = labels_real.to(self.device)
-                    out = model(inputs_real)
-                    print(inputs_real.shape, labels_real.shape, out.shape)
-                    print(inputs_real)
                     
-                    loss_real = criterion(out, labels_real)
+                    loss_real = criterion(model(inputs_real), labels_real)
                     gw_real = torch.autograd.grad(loss_real, model_params)
                     gw_real = tuple(gradients.detach() for gradients in gw_real)
                     
