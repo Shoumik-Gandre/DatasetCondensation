@@ -8,11 +8,12 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, Subset, TensorDataset, ConcatDataset, SubsetRandomSampler
 from torchvision import models, datasets, transforms
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from dcgm.init_strategy import DatasetInitStrategy, RandomStratifiedInitStrategy
 from dcgm.handle_batchnorm import has_batchnormalization, fix_batchnormalization_statistics, update_batchnorm_statistics
 from dcgm.distance_metrics import DCGMDistance, match_loss
+from dcgm.model_init import ModelInitStrategy, HomogenousModelInitStrategy
 
 from networks import LeNet5
 from dcgm.train_classifier import train_step, eval_step, train
@@ -38,6 +39,7 @@ class DCGMSynthesizer:
     dataset: Dataset[Tuple[torch.Tensor, torch.Tensor]]
     device: torch.device
     dataset_init_strategy: DatasetInitStrategy
+    model_init_strategy: ModelInitStrategy
     hyperparams: DCGMHyperparameters
 
     def synthesize(self) -> TensorDataset:
@@ -52,14 +54,14 @@ class DCGMSynthesizer:
         # * loss function computed on the model
         criterion = nn.CrossEntropyLoss()
 
-        for iteration in range(self.hyperparams.iterations):
-            print(f"iteration [{iteration}/{self.hyperparams.iterations}]")
-            model: nn.Module = LeNet5(1, num_classes=10).to(self.device)  # TODO: write a function to assign a model
+        for iteration in tqdm(range(self.hyperparams.iterations), desc=" iterations", position=0):
+            
+            model: nn.Module = self.model_init_strategy.init()  # TODO: write a function to assign a model
             model_params = list(model.parameters())
             model_optimizer = torch.optim.SGD(model.parameters(), lr=self.hyperparams.lr_nn)
 
-            for eta_data in range(self.hyperparams.outer_loops):
-                print(f"outerloop [{eta_data}/{self.hyperparams.outer_loops}]")
+            for eta_data in tqdm(range(self.hyperparams.outer_loops), desc=" outer loops", position=1, leave=False):
+
                 # [HANDLE BATCHNORMALIZATION]
                 # detect batchnormalization
                 if has_batchnormalization(model):
@@ -69,7 +71,7 @@ class DCGMSynthesizer:
 
                 gradient_distance = torch.tensor(0.0).to(self.device)
                 for label in range(self.num_labels):
-                    print(f"label [{label}/{self.num_labels}]")
+
                     dataloader_real = DataLoader(
                         real_dataset_labelwise[label], 
                         batch_size=self.hyperparams.batch_size
@@ -188,6 +190,7 @@ def run(
         dataset=train_dataset,
         device=device,
         dataset_init_strategy=dataset_init_strategy,
+        model_init_strategy=HomogenousModelInitStrategy(LeNet5, {'channels': 1, 'num_classes': 10}),
         hyperparams=hyperparams
     )
 
