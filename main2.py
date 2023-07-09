@@ -134,8 +134,6 @@ def main():
                     else:
                         args.epoch_eval_train = 300
                     
-                    args.dc_aug_param = None
-
                     accs = []
                     for it_eval in range(args.num_eval):
                         net_eval = get_network(model_eval, channel, num_classes, im_size).to(args.device) # get a random model
