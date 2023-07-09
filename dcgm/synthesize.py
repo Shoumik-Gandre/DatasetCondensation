@@ -41,6 +41,7 @@ class DCGMSynthesizer:
     dataset_init_strategy: DatasetInitStrategy
     model_init_strategy: ModelInitStrategy
     hyperparams: DCGMHyperparameters
+    distance_metric: nn.Module = DCGMDistance()
 
     def synthesize(self) -> TensorDataset:
         syn_dataset = self.dataset_init_strategy.init()
@@ -69,35 +70,44 @@ class DCGMSynthesizer:
                     update_batchnorm_statistics(model, real_dataset_labelwise, self.hyperparams.batchnorm_batchsize_perclass)
                     fix_batchnormalization_statistics(model)
 
-                gradient_distance = torch.tensor(0.0).to(self.device)
+                gradient_distance = torch.tensor(0.0, device=self.device)
                 for label in range(self.num_labels):
 
                     dataloader_real = DataLoader(
                         real_dataset_labelwise[label], 
                         batch_size=self.hyperparams.batch_size
                     )
-                    dataloader_syn = DataLoader(
-                        syn_dataset, 
-                        batch_size=self.hyperparams.ipc, 
-                        sampler=SubsetRandomSampler(
-                            indices=range(self.hyperparams.ipc * (label), self.hyperparams.ipc * (label + 1))
-                        )
-                    )
+                    # dataloader_syn = DataLoader(
+                    #     syn_dataset, 
+                    #     batch_size=self.hyperparams.ipc, 
+                    #     sampler=SubsetRandomSampler(
+                    #         indices=range(
+                    #             self.hyperparams.ipc * (label), 
+                    #             self.hyperparams.ipc * (label + 1)
+                    #         )
+                    #     )
+                    # )
+                    # Compute real Gradients
                     inputs_real, labels_real = next(iter(dataloader_real))
                     inputs_real = inputs_real.to(self.device)
                     labels_real = labels_real.to(self.device)
                     
                     loss_real = criterion(model(inputs_real), labels_real)
                     gw_real = torch.autograd.grad(loss_real, model_params)
-                    gw_real = tuple(gradients.detach() for gradients in gw_real)
+                    gw_real = (gradients.detach() for gradients in gw_real)
                     
-                    inputs_syn, labels_syn = next(iter(dataloader_syn))
+                    # Compute Synthetic Gradients
+                    # inputs_syn, labels_syn = next(iter(dataloader_syn))
+                    inputs_syn = syn_dataset.tensors[0][self.hyperparams.ipc * (label): self.hyperparams.ipc * (label + 1)]
+                    labels_syn = syn_dataset.tensors[1][self.hyperparams.ipc * (label): self.hyperparams.ipc * (label + 1)]
+
                     inputs_syn = inputs_syn.to(self.device)
                     labels_syn = labels_syn.to(self.device)
                     loss_syn = criterion(model(inputs_syn), labels_syn)
                     gw_syn = torch.autograd.grad(loss_syn, model_params, create_graph=True)
 
-                    gradient_distance += match_loss(gw_syn, gw_real, DCGMDistance())
+                    # Aggregate distance between gradients
+                    gradient_distance += match_loss(gw_syn, gw_real, self.distance_metric)
                 
                 dataset_optimizer.zero_grad()
                 gradient_distance.backward()
@@ -108,10 +118,14 @@ class DCGMSynthesizer:
                     break
 
                 ''' update network '''
-                image_syn_train = inputs_syn.detach()  # type: ignore
-                label_syn_train = labels_syn.detach()  # type: ignore
-                dst_syn_train = TensorDataset(image_syn_train, label_syn_train)
-                trainloader = DataLoader(dst_syn_train, batch_size=self.hyperparams.batch_size, shuffle=True, num_workers=2)
+                trainloader = DataLoader(
+                    TensorDataset(
+                        inputs_syn.detach(),  # type: ignore
+                        labels_syn.detach()  # type: ignore
+                    ),
+                    batch_size=self.hyperparams.batch_size, 
+                    shuffle=True, num_workers=2
+                )
                 
                 for eta_model in range(self.hyperparams.inner_loops):
                     train_step(model, criterion, model_optimizer, trainloader, self.device)                 
