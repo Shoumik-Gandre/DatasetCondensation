@@ -1,5 +1,6 @@
 import copy
 from dataclasses import dataclass
+from pathlib import Path
 import random
 from typing import Tuple
 
@@ -11,8 +12,11 @@ from torchvision.transforms import transforms
 from tqdm import tqdm
 
 from dcgm.init_strategy import DatasetInitStrategy, RandomStratifiedInitStrategy
-from dcgm.utils import has_batchnormalization, fix_batchnormalization_statistics, update_batchnorm_statistics
+from dcgm.handle_batchnorm import has_batchnormalization, fix_batchnormalization_statistics, update_batchnorm_statistics
 from dcgm.distance_metrics import DCGMDistance, match_loss
+
+from networks import LeNet5
+from dcgm.train_classifier import train_step, eval_step, train
 
 
 @dataclass
@@ -37,6 +41,68 @@ class DCGMSynthesizer:
     dataset_init_strategy: DatasetInitStrategy
     hyperparams: DCGMHyperparameters
 
+    def synthesize(self) -> TensorDataset:
+        syn_dataset = self.dataset_init_strategy.init()
+        real_dataset_labelwise = self._get_labelwise_subsets(dataset=self.dataset, num_labels=self.num_labels)
+
+        # * Optimizer used on the synthetic dataset's features
+        dataset_optimizer = torch.optim.SGD(params=(syn_dataset.tensors[0],), 
+                                            lr=self.hyperparams.lr_dataset, 
+                                            momentum=self.hyperparams.momentum_dataset)
+        dataset_optimizer.zero_grad()
+        # * loss function computed on the model
+        criterion = nn.CrossEntropyLoss()
+
+        for iteration in range(self.hyperparams.iterations):
+            model: nn.Module = LeNet5(self.dimensions[0], num_classes=self.num_labels).to(self.device)  # TODO: write a function to assign a model
+            model_params = list(model.parameters())
+            model_optimizer = torch.optim.SGD(model.parameters(), lr=self.hyperparams.lr_nn)
+
+            for eta_data in range(self.hyperparams.outer_loops):
+                
+                # [HANDLE BATCHNORMALIZATION]
+                # detect batchnormalization
+                if has_batchnormalization(model):
+                    # Upon detection, we need to obtain batchnorm statistics from real data
+                    update_batchnorm_statistics(model, real_dataset_labelwise, self.hyperparams.batchnorm_batchsize_perclass)
+                    fix_batchnormalization_statistics(model)
+
+                gradient_distance = torch.tensor(0.0).to(self.device)
+                for label in range(self.num_labels):
+                    inputs_real, labels_real = next(iter(DataLoader(real_dataset_labelwise[label], batch_size=self.hyperparams.batch_size)))
+                    inputs_syn, labels_syn = next(iter(DataLoader(
+                        syn_dataset, 
+                        batch_size=self.hyperparams.ipc, 
+                        sampler=SubsetRandomSampler(list(range(self.hyperparams.ipc * (label), self.hyperparams.ipc * (label + 1))))
+                        )))
+                    loss_real = criterion(model(inputs_real), labels_real)
+                    gw_real = torch.autograd.grad(loss_real, model_params)
+                    gw_real = tuple(gradients.detach().clone() for gradients in gw_real)
+
+                    loss_syn = criterion(model(inputs_syn), labels_syn)
+                    gw_syn = torch.autograd.grad(loss_syn, model_params, create_graph=True)
+
+                    gradient_distance += match_loss(gw_syn, gw_real, DCGMDistance())
+                
+                dataset_optimizer.zero_grad()
+                gradient_distance.backward()
+                dataset_optimizer.step()
+                
+                # No need to update network at final outerloop
+                if eta_data == self.hyperparams.outer_loops - 1:
+                    break
+
+                ''' update network '''
+                image_syn_train = inputs_syn.detach()  # type: ignore
+                label_syn_train = labels_syn.detach()  # type: ignore
+                dst_syn_train = TensorDataset(image_syn_train, label_syn_train)
+                trainloader = DataLoader(dst_syn_train, batch_size=self.hyperparams.batch_size, shuffle=True, num_workers=2)
+                
+                for eta_model in range(self.hyperparams.inner_loops):
+                    train_step(model, criterion, model_optimizer, trainloader, self.device)                 
+
+        return syn_dataset
+
     def _get_labelwise_subsets(self, dataset: Dataset, num_labels: int) -> Tuple[Subset[Tuple[torch.Tensor, torch.Tensor]]]:
         """Classwise subset is a tuple that can be indexed by a label 
         to obtain the subset of the features with those labels."""
@@ -53,95 +119,38 @@ class DCGMSynthesizer:
         )
 
         return labelwise_subsets
-
-    def synthesize(self) -> TensorDataset:
-        syn_dataset = self.dataset_init_strategy.init()
-        real_dataset_labelwise = self._get_labelwise_subsets(dataset=self.dataset, num_labels=self.num_labels)
-
-        # * Optimizer used on the synthetic dataset's features
-        dataset_optimizer = torch.optim.SGD(params=(syn_dataset.tensors[0],), 
-                                            lr=self.hyperparams.lr_dataset, 
-                                            momentum=self.hyperparams.momentum_dataset)
-        dataset_optimizer.zero_grad()
-        # * loss function computed on the model
-        criterion = nn.CrossEntropyLoss()
-
-        for iteration in range(self.hyperparams.iterations):
-            model: nn.Module = models.resnet18().to(self.device)  # TODO: write a function to assign a model
-            model_params = list(model.parameters())
-            model_optimizer = torch.optim.SGD(model.parameters(), lr=self.hyperparams.lr_nn)
-
-            for eta_data in range(self.hyperparams.outer_loops):
-                
-                # [HANDLE BATCHNORMALIZATION]
-                # TODO: Write code that updates batch norm statistics from real data 
-                # 1. detect batchnormalization
-                if has_batchnormalization(model):
-                    # Upon detection, we need to obtain batchnorm statistics from real data
-                    update_batchnorm_statistics(model, real_dataset_labelwise, self.hyperparams.batchnorm_batchsize_perclass)
-                    fix_batchnormalization_statistics(model)
-
-                loss = torch.tensor(0.0).to(self.device)
-                for label in range(self.num_labels):
-                    inputs_real, labels_real = next(iter(DataLoader(real_dataset_labelwise[label], batch_size=self.hyperparams.batch_size)))
-                    inputs_syn, labels_syn = next(iter(DataLoader(
-                        syn_dataset, 
-                        batch_size=self.hyperparams.ipc, 
-                        sampler=SubsetRandomSampler(list(range(self.hyperparams.ipc * (label), self.hyperparams.ipc * (label + 1))))
-                        )))
-                    loss_real = criterion(model(inputs_real), labels_real)
-                    gw_real = torch.autograd.grad(loss_real, model_params)
-                    gw_real = list((gradients.detach().clone() for gradients in gw_real))
-
-                    loss_syn = criterion(model(inputs_syn), labels_syn)
-                    gw_syn = torch.autograd.grad(loss_syn, model_params, create_graph=True)
-
-                    loss += match_loss(gw_syn, gw_real, DCGMDistance())
-                
-                dataset_optimizer.zero_grad()
-                loss.backward()
-                dataset_optimizer.step()
-                
-                # No need to update network at final outerloop
-                if eta_data == self.hyperparams.outer_loops - 1:
-                    break
-
-                ''' update network '''
-                image_syn_train = copy.deepcopy(inputs_syn.detach())  # type: ignore
-                label_syn_train = copy.deepcopy(labels_syn.detach())  # type: ignore
-                dst_syn_train = TensorDataset(image_syn_train, label_syn_train)
-                trainloader = DataLoader(dst_syn_train, batch_size=self.hyperparams.batch_size, shuffle=True, num_workers=2)
-                
-                for eta_model in range(self.hyperparams.inner_loops):
-                    model.train()
-                    running_loss = 0.0
-                    for inputs, labels in tqdm(trainloader):
-                        inputs.to(self.device)
-                        labels.to(self.device)
-
-                        loss: torch.Tensor = criterion(model(criterion), labels)
-                        running_loss += loss.item()
-                        model_optimizer.zero_grad()
-                        loss.backward()
-                        model_optimizer.step()     
-                    print(running_loss / len(trainloader))                   
-
-        return syn_dataset
     
 
-def run():
+def run(
+        data_root: str
+):
+    Path(data_root).mkdir(parents=True, exist_ok=True)
     device = torch.device('cuda')
-    dataset = datasets.MNIST(
-        r'D:\USC\DeepUSC\project1\zskd baseline\Zero-shot_Knowledge_Distillation_Pytorch\data\real', 
+    train_dataset = datasets.MNIST(
+        # r'D:\USC\DeepUSC\project1\zskd baseline\Zero-shot_Knowledge_Distillation_Pytorch\data\real',
+        data_root, 
         train=True, 
-        transform=transforms.Compose([
-            transforms.Grayscale(3),
-            transforms.ToTensor(),
-        ])
+        transform=transforms.Compose([ 
+                        # transforms.Grayscale(num_output_channels=3), 
+                        transforms.Resize((32, 32)),
+                        transforms.ToTensor(),
+                        transforms.Normalize((0.1307,), (0.3081,)),
+                    ]), 
+    )
+    eval_dataset = datasets.MNIST(
+        # r'D:\USC\DeepUSC\project1\zskd baseline\Zero-shot_Knowledge_Distillation_Pytorch\data\real',
+        data_root, 
+        train=False, 
+        transform=transforms.Compose([ 
+                        # transforms.Grayscale(num_output_channels=3), 
+                        transforms.Resize((32, 32)),
+                        transforms.ToTensor(),
+                        transforms.Normalize((0.1307,), (0.3081,)),
+                    ]), 
     )
 
     hyperparams = DCGMHyperparameters(
-        iterations=1, 
+        iterations=1000, 
         outer_loops=1, 
         inner_loops=1, 
         batch_size=64, 
@@ -150,13 +159,28 @@ def run():
         lr_nn=0.01
     )
 
+    dataset_init_strategy = RandomStratifiedInitStrategy(
+        dimensions=(1, 32, 32), 
+        num_classes=10, 
+        ipc=1, 
+        device=device
+    )
+
     synthesizer = DCGMSynthesizer(
-        dimensions=(3, 32, 32),
+        dimensions=(1, 32, 32),
         num_labels=10,
-        dataset=dataset,
+        dataset=train_dataset,
         device=device,
-        dataset_init_strategy=RandomStratifiedInitStrategy(dimensions=(3, 32, 32), num_classes=10, ipc=10, device=device),
+        dataset_init_strategy=dataset_init_strategy,
         hyperparams=hyperparams
     )
 
-    synthesizer.synthesize()
+    dataset = synthesizer.synthesize()
+
+    dataset = TensorDataset(dataset.tensors[0].detach(), dataset.tensors[1].detach())
+
+    train_dataloader = DataLoader(dataset, 256)
+    eval_dataloader = DataLoader(eval_dataset, 256)
+    model = LeNet5(1, 10)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+    train(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, eval_dataloader, 300, device)
