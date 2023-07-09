@@ -25,7 +25,7 @@ from networks import (
 def get_dataset(dataset, data_path):
     if dataset == 'MNIST':
         channel = 1
-        im_size = (28, 28)
+        im_size = (32, 32)
         num_classes = 10
         mean = [0.1307]
         std = [0.3081]
