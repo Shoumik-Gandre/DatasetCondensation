@@ -29,7 +29,7 @@ class DCGMHyperparameters:
     momentum_dataset: float
     lr_nn: float
     batchnorm_batchsize_perclass: int = 16
-    ipc = 10
+    ipc: int = 1
 
 
 @dataclass
@@ -77,7 +77,7 @@ class DCGMSynthesizer:
                         syn_dataset, 
                         batch_size=self.hyperparams.ipc, 
                         sampler=SubsetRandomSampler(
-                            indices=list(range(self.hyperparams.ipc * (label), self.hyperparams.ipc * (label + 1)))
+                            indices=range(self.hyperparams.ipc * (label), self.hyperparams.ipc * (label + 1))
                         )
                     )
                     inputs_real, labels_real = next(iter(dataloader_real))
@@ -170,7 +170,8 @@ def run(
         batch_size=64, 
         lr_dataset=0.1, 
         momentum_dataset=0.5, 
-        lr_nn=0.01
+        lr_nn=0.01,
+        ipc=1,
     )
 
     dataset_init_strategy = RandomStratifiedInitStrategy(
