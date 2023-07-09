@@ -54,7 +54,7 @@ class DCGMSynthesizer:
         # * loss function computed on the model
         criterion = nn.CrossEntropyLoss()
 
-        for iteration in tqdm(range(self.hyperparams.iterations), desc=" iterations", position=0):
+        for iteration in tqdm(range(self.hyperparams.iterations), desc=" iterations", position=0, leave=True):
             
             model: nn.Module = self.model_init_strategy.init().to(self.device)  # TODO: write a function to assign a model
             model_params = list(model.parameters())
