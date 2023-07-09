@@ -168,7 +168,7 @@ def run(
         iterations=1000, 
         outer_loops=1, 
         inner_loops=1, 
-        batch_size=64, 
+        batch_size=256, 
         lr_dataset=0.1, 
         momentum_dataset=0.5, 
         lr_nn=0.01,
@@ -199,4 +199,13 @@ def run(
     eval_dataloader = DataLoader(eval_dataset, 256)
     model = LeNet5(1, 10)
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+
+    gpu_num = torch.cuda.device_count()
+    if gpu_num>0:
+        device = 'cuda'
+        if gpu_num>1:
+            model = nn.DataParallel(model)
+    else:
+        device = 'cpu'
+    model = model.to(device)
     train(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, eval_dataloader, 300, device)
