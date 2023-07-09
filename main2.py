@@ -133,6 +133,8 @@ def main():
                         args.epoch_eval_train = 1000  # Training with data augmentation needs more epochs.
                     else:
                         args.epoch_eval_train = 300
+                    
+                    args.dc_aug_param = None
 
                     accs = []
                     for it_eval in range(args.num_eval):
