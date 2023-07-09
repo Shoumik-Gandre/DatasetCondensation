@@ -143,7 +143,7 @@ def run(
         download=True,
         transform=transforms.Compose([ 
                         # transforms.Grayscale(num_output_channels=3), 
-                        transforms.Resize((32, 32)),
+                        transforms.Resize((28, 28)),
                         transforms.ToTensor(),
                         transforms.Normalize((0.1307,), (0.3081,)),
                     ]), 
@@ -155,7 +155,7 @@ def run(
         download=True,
         transform=transforms.Compose([ 
                         # transforms.Grayscale(num_output_channels=3), 
-                        transforms.Resize((32, 32)),
+                        transforms.Resize((28, 28)),
                         transforms.ToTensor(),
                         transforms.Normalize((0.1307,), (0.3081,)),
                     ]), 
@@ -172,14 +172,14 @@ def run(
     )
 
     dataset_init_strategy = RandomStratifiedInitStrategy(
-        dimensions=(1, 32, 32), 
+        dimensions=(1, 28, 28), 
         num_classes=10, 
         ipc=1, 
         device=device
     )
 
     synthesizer = DCGMSynthesizer(
-        dimensions=(1, 32, 32),
+        dimensions=(1, 28, 28),
         num_labels=10,
         dataset=train_dataset,
         device=device,
