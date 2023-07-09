@@ -9,7 +9,7 @@ class DCGMDistance(nn.Module):
 
     def forward(self, gwr: torch.Tensor, gws: torch.Tensor) -> torch.Tensor:
         shape = gwr.shape
-        if len(shape) in (3, 4): # conv, out*in*h*w
+        if len(shape) in (3, 4): # layernorm, conv, out*in*h*w
             gwr = gwr.reshape(shape[0], -1)
             gws = gws.reshape(shape[0], -1)
 
@@ -17,8 +17,6 @@ class DCGMDistance(nn.Module):
             pass
 
         elif len(shape) == 1: # batchnorm/instancenorm, C; groupnorm x, bias
-            gwr = gwr.reshape(1, shape[0])
-            gws = gws.reshape(1, shape[0])
             return torch.tensor(0, dtype=torch.float, device=gwr.device)
 
         return torch.sum(

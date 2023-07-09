@@ -11,7 +11,8 @@ from torchvision.transforms import transforms
 from tqdm import tqdm
 
 from dcgm.init_strategy import DatasetInitStrategy, RandomStratifiedInitStrategy
-from dcgm.utils import has_batchnormalization, fix_batchnormalization_statistics, match_loss
+from dcgm.utils import has_batchnormalization, fix_batchnormalization_statistics, update_batchnorm_statistics
+from dcgm.distance_metrics import DCGMDistance, match_loss
 
 
 @dataclass
@@ -77,26 +78,7 @@ class DCGMSynthesizer:
                 # 1. detect batchnormalization
                 if has_batchnormalization(model):
                     # Upon detection, we need to obtain batchnorm statistics from real data
-                    # TODO: now obtain batch norm statistics
-                    batch_norm_dataset = []
-                    # Obtain labelwise random subsets from real data
-                    for subset in real_dataset_labelwise:
-                        random_labelwise_subset = Subset(
-                            dataset=subset, 
-                            indices=random.sample(
-                                range(len(subset)), 
-                                self.hyperparams.batchnorm_batchsize_perclass
-                            )
-                        )
-                        batch_norm_dataset.append(random_labelwise_subset)
-                    
-                    batch_norm_dataset = ConcatDataset(batch_norm_dataset)
-                    # Load all of the data at once into the memory using dataloader
-                    dataloader = DataLoader(batch_norm_dataset, batch_size=len(batch_norm_dataset), num_workers=2)
-                    # Activate batchnormalization
-                    model.train()
-                    inputs, _ = next(iter(dataloader))
-                    model(inputs)  # Batchnormalization statistics updated
+                    update_batchnorm_statistics(model, real_dataset_labelwise, self.hyperparams.batchnorm_batchsize_perclass)
                     fix_batchnormalization_statistics(model)
 
                 loss = torch.tensor(0.0).to(self.device)
@@ -114,7 +96,7 @@ class DCGMSynthesizer:
                     loss_syn = criterion(model(inputs_syn), labels_syn)
                     gw_syn = torch.autograd.grad(loss_syn, model_params, create_graph=True)
 
-                    loss += match_loss(gw_syn, gw_real, 'ours', self.device)
+                    loss += match_loss(gw_syn, gw_real, DCGMDistance())
                 
                 dataset_optimizer.zero_grad()
                 loss.backward()

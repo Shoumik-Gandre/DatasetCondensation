@@ -98,7 +98,7 @@ def main():
 
         ''' initialize the synthetic data '''
         image_syn = torch.randn(size=(num_classes*args.ipc, channel, im_size[0], im_size[1]), dtype=torch.float, requires_grad=True, device=args.device)
-        label_syn = torch.tensor([np.ones(args.ipc)*i for i in range(num_classes)], dtype=torch.long, requires_grad=False, device=args.device).view(-1) # [0,0,0, 1,1,1, ..., 9,9,9]
+        label_syn = torch.arange(0, num_classes, device=args.device).repeat_interleave(args.ipc)
 
         if args.init == 'real':
             print('initialize synthetic data from random real images')
@@ -202,7 +202,7 @@ def main():
                     output_real = net(img_real)
                     loss_real = criterion(output_real, lab_real)
                     gw_real = torch.autograd.grad(loss_real, net_parameters)
-                    gw_real = list((_.detach().clone() for _ in gw_real))
+                    gw_real = list((_.detach() for _ in gw_real))
 
                     output_syn = net(img_syn)
                     loss_syn = criterion(output_syn, lab_syn)
