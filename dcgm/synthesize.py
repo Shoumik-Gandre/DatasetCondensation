@@ -69,12 +69,20 @@ class DCGMSynthesizer:
 
                 gradient_distance = torch.tensor(0.0).to(self.device)
                 for label in range(self.num_labels):
-                    inputs_real, labels_real = next(iter(DataLoader(real_dataset_labelwise[label], batch_size=self.hyperparams.batch_size)))
-                    inputs_syn, labels_syn = next(iter(DataLoader(
+                    dataloader_real = DataLoader(
+                        real_dataset_labelwise[label], 
+                        batch_size=self.hyperparams.batch_size
+                    )
+                    dataloader_syn = DataLoader(
                         syn_dataset, 
                         batch_size=self.hyperparams.ipc, 
-                        sampler=SubsetRandomSampler(list(range(self.hyperparams.ipc * (label), self.hyperparams.ipc * (label + 1))))
-                        )))
+                        sampler=SubsetRandomSampler(
+                            indices=list(range(self.hyperparams.ipc * (label), self.hyperparams.ipc * (label + 1)))
+                        )
+                    )
+                    inputs_real, labels_real = next(iter(dataloader_real))
+                    inputs_syn, labels_syn = next(iter(dataloader_syn))
+
                     loss_real = criterion(model(inputs_real.to(self.device)), labels_real.to(self.device))
                     gw_real = torch.autograd.grad(loss_real, model_params)
                     gw_real = tuple(gradients.detach().clone() for gradients in gw_real)
