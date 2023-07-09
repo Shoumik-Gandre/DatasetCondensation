@@ -130,6 +130,7 @@ def run(
         # r'D:\USC\DeepUSC\project1\zskd baseline\Zero-shot_Knowledge_Distillation_Pytorch\data\real',
         data_root, 
         train=True, 
+        download=True,
         transform=transforms.Compose([ 
                         # transforms.Grayscale(num_output_channels=3), 
                         transforms.Resize((32, 32)),
@@ -140,7 +141,8 @@ def run(
     eval_dataset = datasets.MNIST(
         # r'D:\USC\DeepUSC\project1\zskd baseline\Zero-shot_Knowledge_Distillation_Pytorch\data\real',
         data_root, 
-        train=False, 
+        train=False,
+        download=True,
         transform=transforms.Compose([ 
                         # transforms.Grayscale(num_output_channels=3), 
                         transforms.Resize((32, 32)),
