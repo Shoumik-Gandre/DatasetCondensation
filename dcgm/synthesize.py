@@ -125,7 +125,7 @@ class DCGMSynthesizer:
                 )
                 
                 for eta_model in range(self.hyperparams.inner_loops):
-                    train_step(model, criterion, model_optimizer, trainloader, self.device)                 
+                    train_step(model, criterion, model_optimizer, trainloader, self.device, augment_flag=True)                 
 
         return syn_dataset
 
@@ -220,7 +220,7 @@ def run(
 
     model = nn.DataParallel(model)
     model = model.to(device)
-    for _ in range(300):
+    for _ in range(1000):
         train_step(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, device)
     loss, acc = eval_step(model, nn.CrossEntropyLoss(), eval_dataloader, device)
     print(f"{loss = } {acc = }")
