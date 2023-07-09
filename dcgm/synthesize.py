@@ -190,7 +190,7 @@ def run(
         dataset=train_dataset,
         device=device,
         dataset_init_strategy=dataset_init_strategy,
-        model_init_strategy=HomogenousModelInitStrategy(LeNet5, {'channels': 1, 'num_classes': 10}),
+        model_init_strategy=HomogenousModelInitStrategy(LeNet5, {'channel': 1, 'num_classes': 10}),
         hyperparams=hyperparams
     )
 
