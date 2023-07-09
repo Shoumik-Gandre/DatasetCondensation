@@ -81,17 +81,20 @@ class DCGMSynthesizer:
                         )
                     )
                     inputs_real, labels_real = next(iter(dataloader_real))
-                    inputs_syn, labels_syn = next(iter(dataloader_syn))
                     inputs_real = inputs_real.to(self.device)
                     labels_real = labels_real.to(self.device)
                     out = model(inputs_real)
                     print(inputs_real.shape, labels_real.shape, out.shape)
+                    print(inputs_real)
                     
                     loss_real = criterion(out, labels_real)
                     gw_real = torch.autograd.grad(loss_real, model_params)
                     gw_real = tuple(gradients.detach() for gradients in gw_real)
-
-                    loss_syn = criterion(model(inputs_syn.to(self.device)), labels_syn.to(self.device))
+                    
+                    inputs_syn, labels_syn = next(iter(dataloader_syn))
+                    inputs_syn = inputs_syn.to(self.device)
+                    labels_syn = labels_syn.to(self.device)
+                    loss_syn = criterion(model(inputs_syn), labels_syn)
                     gw_syn = torch.autograd.grad(loss_syn, model_params, create_graph=True)
 
                     gradient_distance += match_loss(gw_syn, gw_real, DCGMDistance())
