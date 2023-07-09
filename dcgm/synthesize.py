@@ -223,4 +223,8 @@ def run(
 
     model = nn.DataParallel(model)
     model = model.to(device)
-    train(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, eval_dataloader, 300, device)
+    # train(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, eval_dataloader, 300, device)
+    for _ in range(300):
+        train_step(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, device)
+    loss, acc = eval_step(model, nn.CrossEntropyLoss(), eval_dataloader, device)
+    print(f"{loss = } {acc = }")
