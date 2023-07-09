@@ -75,7 +75,7 @@ class DCGMSynthesizer:
                         batch_size=self.hyperparams.ipc, 
                         sampler=SubsetRandomSampler(list(range(self.hyperparams.ipc * (label), self.hyperparams.ipc * (label + 1))))
                         )))
-                    loss_real = criterion(model(inputs_real), labels_real)
+                    loss_real = criterion(model(inputs_real.to(self.device)), labels_real.to(self.device))
                     gw_real = torch.autograd.grad(loss_real, model_params)
                     gw_real = tuple(gradients.detach().clone() for gradients in gw_real)
 
