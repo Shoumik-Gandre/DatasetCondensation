@@ -502,7 +502,7 @@ class LeNet5(nn.Module):
     def __init__(self, channel: int, num_classes: int):
         super(LeNet5, self).__init__()
 
-        self.conv1 = nn.Conv2d(channel, 6, kernel_size=5, padding=(2 if channel==1 else 0))
+        self.conv1 = nn.Conv2d(channel, 6, kernel_size=5)
         self.relu1 = nn.ReLU()
         self.maxpool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.conv2 = nn.Conv2d(6, 16, kernel_size=5)
