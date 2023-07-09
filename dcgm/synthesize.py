@@ -7,8 +7,7 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, Subset, TensorDataset, ConcatDataset, SubsetRandomSampler
-from torchvision import models, datasets
-from torchvision.transforms import transforms
+from torchvision import models, datasets, transforms
 from tqdm import tqdm
 
 from dcgm.init_strategy import DatasetInitStrategy, RandomStratifiedInitStrategy
@@ -54,12 +53,13 @@ class DCGMSynthesizer:
         criterion = nn.CrossEntropyLoss()
 
         for iteration in range(self.hyperparams.iterations):
+            print(f"iteration [{iteration}/{self.hyperparams.iterations}]")
             model: nn.Module = LeNet5(1, num_classes=10).to(self.device)  # TODO: write a function to assign a model
             model_params = list(model.parameters())
             model_optimizer = torch.optim.SGD(model.parameters(), lr=self.hyperparams.lr_nn)
 
             for eta_data in range(self.hyperparams.outer_loops):
-                
+                print(f"outerloop [{eta_data}/{self.hyperparams.outer_loops}]")
                 # [HANDLE BATCHNORMALIZATION]
                 # detect batchnormalization
                 if has_batchnormalization(model):
@@ -69,6 +69,7 @@ class DCGMSynthesizer:
 
                 gradient_distance = torch.tensor(0.0).to(self.device)
                 for label in range(self.num_labels):
+                    print(f"label [{label}/{self.num_labels}]")
                     dataloader_real = DataLoader(
                         real_dataset_labelwise[label], 
                         batch_size=self.hyperparams.batch_size
