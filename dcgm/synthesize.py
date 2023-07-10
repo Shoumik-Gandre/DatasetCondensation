@@ -1,8 +1,8 @@
-import copy
 from dataclasses import dataclass
 from pathlib import Path
-import random
 from typing import Tuple
+from functools import partialmethod
+
 
 import torch
 import torch.nn as nn
@@ -213,14 +213,16 @@ def run(
 
     dataset = TensorDataset(dataset.tensors[0].detach(), dataset.tensors[1].detach())
 
-    train_dataloader = DataLoader(dataset, 256)
-    eval_dataloader = DataLoader(eval_dataset, 256)
+    train_dataloader = DataLoader(dataset, 256, shuffle=True, num_workers=2)
+    eval_dataloader = DataLoader(eval_dataset, 256, num_workers=2)
     model = LeNet5(1, 10)
     # optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
 
     model = nn.DataParallel(model)
     model = model.to(device)
+
+    tqdm.__init__ = partialmethod(tqdm.__init__, disable=True) # type: ignore
     for _ in range(1000):
         train_step(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, device)
     loss, acc = eval_step(model, nn.CrossEntropyLoss(), eval_dataloader, device)
