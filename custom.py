@@ -11,7 +11,7 @@ from dcgm.synthesize import DCGMHyperparameters, DCGMSynthesizer
 from dcgm.train_classifier import train_step, eval_step
 import fire
 
-from utils import epoch, get_daparam, get_time
+from utils import epoch
 from argparse import Namespace
 
 
@@ -77,7 +77,7 @@ def run(
     )
 
     hyperparams = DCGMHyperparameters(
-        iterations=1000, 
+        iterations=10, 
         outer_loops=1, 
         inner_loops=1, 
         batch_size=256, 
@@ -115,29 +115,35 @@ def run(
     model = nn.DataParallel(model)
     model = model.to(device)
 
-    # args = Namespace()
-    # args.device = 'cuda'
-    # args.lr_net = 0.01
-    # args.batch_real = 256
-    # args.epoch_eval_train = 1000
-    # args.dsa = False
-    # args.dc_aug_param = get_daparam('MNIST', args.model, 'S', 1)
-
+    args = Namespace()
+    args.device = 'cuda'
+    args.lr_net = 0.01
+    args.batch_real = 256
+    args.epoch_eval_train = 1000
+    args.dsa = False
+    args.dc_aug_param = {
+        'crop': 4,
+        'scale': 0.2,
+        'rotate': 45,
+        'noise': 0.001,
+        'strategy': 'crop_scale_rotate',
+    }
+    evaluate_synset(model, images_train=dataset.tensors[0], labels_train=dataset.tensors[1], testloader=eval_dataloader, args=args)
     
-    learning_rate = 0.01
+    # learning_rate = 0.01
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0005)
-    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[1000//2+1], gamma=0.1)
-    lr_schedule = [1000//2+1]
-    for epoch in range(1000+1):
-        train_step(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, device)
-        if epoch in lr_schedule:
-            learning_rate *= 0.1
-            optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0005)
-        # scheduler.step()
+    # optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0005)
+    # # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[1000//2+1], gamma=0.1)
+    # lr_schedule = [1000//2+1]
+    # for epoch in range(1000+1):
+    #     train_step(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, device)
+    #     if epoch in lr_schedule:
+    #         learning_rate *= 0.1
+    #         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0005)
+    #     # scheduler.step()
 
-    loss, acc = eval_step(model, nn.CrossEntropyLoss(), eval_dataloader, device)
-    print(f"{loss = } {acc = }")
+    # loss, acc = eval_step(model, nn.CrossEntropyLoss(), eval_dataloader, device)
+    # print(f"{loss = } {acc = }")
 
 
 if __name__ == '__main__':
