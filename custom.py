@@ -1,9 +1,103 @@
+from pathlib import Path
 import torch
-from torchvision import datasets
-from torchvision import transforms
-
-from dcgm.synthesize import DCGMHyperparameters, DCGMSynthesizer, run
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
+from torchvision import datasets, transforms
+from networks import LeNet5
+from dcgm.init_strategy import RandomStratifiedInitStrategy
+from dcgm.model_init import HomogenousModelInitStrategy
+from dcgm.synthesize import DCGMHyperparameters, DCGMSynthesizer
+from dcgm.train_classifier import train_step, eval_step
 import fire
+
+
+def run(
+        data_root: str
+):
+    Path(data_root).mkdir(parents=True, exist_ok=True)
+    device = torch.device('cuda')
+    train_dataset = datasets.MNIST(
+        # r'D:\USC\DeepUSC\project1\zskd baseline\Zero-shot_Knowledge_Distillation_Pytorch\data\real',
+        data_root, 
+        train=True, 
+        download=True,
+        transform=transforms.Compose([ 
+                        # transforms.Grayscale(num_output_channels=3), 
+                        transforms.Resize((32, 32)),
+                        transforms.ToTensor(),
+                        transforms.Normalize((0.1307,), (0.3081,)),
+                    ]), 
+    )
+    real_images = torch.stack([train_data[0] for train_data in train_dataset])
+    real_labels = torch.tensor([train_data[1] for train_data in train_dataset], dtype=torch.long)
+
+    train_dataset = TensorDataset(real_images, real_labels)
+    eval_dataset = datasets.MNIST(
+        # r'D:\USC\DeepUSC\project1\zskd baseline\Zero-shot_Knowledge_Distillation_Pytorch\data\real',
+        data_root, 
+        train=False,
+        download=True,
+        transform=transforms.Compose([ 
+                        # transforms.Grayscale(num_output_channels=3), 
+                        transforms.Resize((32, 32)),
+                        transforms.ToTensor(),
+                        transforms.Normalize((0.1307,), (0.3081,)),
+                    ]), 
+    )
+
+    hyperparams = DCGMHyperparameters(
+        iterations=1000, 
+        outer_loops=1, 
+        inner_loops=1, 
+        batch_size=256, 
+        lr_dataset=0.1, 
+        momentum_dataset=0.5, 
+        lr_nn=0.01,
+        ipc=10,
+    )
+
+    dataset_init_strategy = RandomStratifiedInitStrategy(
+        dimensions=(1, 32, 32), 
+        num_classes=10, 
+        ipc=10, 
+        device=device
+    )
+
+    synthesizer = DCGMSynthesizer(
+        dimensions=(1, 32, 32),
+        num_labels=10,
+        dataset=train_dataset,
+        device=device,
+        dataset_init_strategy=dataset_init_strategy,
+        model_init_strategy=HomogenousModelInitStrategy(LeNet5, {'channel': 1, 'num_classes': 10}),
+        hyperparams=hyperparams
+    )
+
+    dataset = synthesizer.synthesize()
+
+    dataset = TensorDataset(dataset.tensors[0].detach(), dataset.tensors[1].detach())
+
+    train_dataloader = DataLoader(dataset, 256, shuffle=True)
+    eval_dataloader = DataLoader(eval_dataset, 256)
+    
+    model = LeNet5(1, 10)
+    model = nn.DataParallel(model)
+    model = model.to(device)
+
+    learning_rate = 0.01
+
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0005)
+    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[1000//2+1], gamma=0.1)
+    lr_schedule = [1000//2+1]
+    for epoch in range(10+1):
+        train_step(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, device)
+        if epoch in lr_schedule:
+            learning_rate *= 0.1
+            optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0005)
+        # scheduler.step()
+
+    loss, acc = eval_step(model, nn.CrossEntropyLoss(), eval_dataloader, device)
+    print(f"{loss = } {acc = }")
 
 
 if __name__ == '__main__':
