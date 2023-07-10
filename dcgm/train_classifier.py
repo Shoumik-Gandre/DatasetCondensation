@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-# from utils import augment, get_daparam
+from utils import augment, get_daparam
 
 
 def train_step(
@@ -19,11 +19,11 @@ def train_step(
         images = images.to(device)
         labels = labels.to(device)
 
-        # #! REMOVE THIS CODE BEFORE PRODUCTION
-        # if augment_flag:
-        #     images = augment(images, get_daparam('mnist', None, None, 1), device=device)
+        #! REMOVE THIS CODE BEFORE PRODUCTION
+        if augment_flag:
+            images = augment(images, get_daparam('mnist', None, None, 1), device=device)
         
-        # #! END
+        #! END
 
         optimizer.zero_grad()
         output = model(images)
