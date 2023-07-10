@@ -55,7 +55,7 @@ class DCGMSynthesizer:
         # * loss function computed on the model
         criterion = nn.CrossEntropyLoss()
 
-        for iteration in tqdm(range(self.hyperparams.iterations + 1), desc=" iterations", position=0):
+        for iteration in tqdm(range(self.hyperparams.iterations), desc="iterations", position=0):
             
             model: nn.Module = self.model_init_strategy.init().to(self.device)  # TODO: write a function to assign a model
             model_params = list(model.parameters())
@@ -216,7 +216,8 @@ def run(
     train_dataloader = DataLoader(dataset, 256)
     eval_dataloader = DataLoader(eval_dataset, 256)
     model = LeNet5(1, 10)
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+    # optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
 
     model = nn.DataParallel(model)
     model = model.to(device)

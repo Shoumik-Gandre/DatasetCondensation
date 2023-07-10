@@ -1,6 +1,6 @@
 import abc
 from dataclasses import dataclass
-from typing import Any, Mapping, Tuple, Type
+from typing import Any, Iterable, Mapping, Tuple, Type
 
 import torch
 import torch.nn as nn
@@ -29,8 +29,7 @@ class HomogenousModelInitStrategy(ModelInitStrategy):
 class HeterogenousModelInitStrategy(ModelInitStrategy):
     """The dataset is intialized randomly with the property that 
     datapoints between ipc*i to ipc*(i+1) will have the label i"""
-    model_class: Type[nn.Module]
-    model_args: Mapping[str, Any]
+    model_pool: Iterable[Tuple[Type[nn.Module], Mapping[str, Any]]]
     
     def init(self) -> nn.Module:
         ''' initialize the model '''
