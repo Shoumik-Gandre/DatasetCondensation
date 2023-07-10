@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple
-from functools import partialmethod
 
 
 import torch
@@ -217,13 +216,15 @@ def run(
     eval_dataloader = DataLoader(eval_dataset, 256, num_workers=2)
     model = LeNet5(1, 10)
     # optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
 
     model = nn.DataParallel(model)
     model = model.to(device)
 
-    tqdm.__init__ = partialmethod(tqdm.__init__, disable=True) # type: ignore
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[1000//2+1], gamma=0.1)
     for _ in range(1000):
         train_step(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, device)
+        scheduler.step()
+
     loss, acc = eval_step(model, nn.CrossEntropyLoss(), eval_dataloader, device)
     print(f"{loss = } {acc = }")

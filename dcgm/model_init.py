@@ -4,7 +4,6 @@ from typing import Any, Iterable, Mapping, Tuple, Type
 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, TensorDataset
 
 
 class ModelInitStrategy(abc.ABC):
@@ -33,4 +32,4 @@ class HeterogenousModelInitStrategy(ModelInitStrategy):
     
     def init(self) -> nn.Module:
         ''' initialize the model '''
-        return self.model_class(**self.model_args)
+        raise NotImplementedError()
