@@ -118,7 +118,7 @@ def run(
     args = Namespace()
     args.device = 'cuda'
     args.lr_net = 0.01
-    args.batch_real = 256
+    args.batch_train = 256
     args.epoch_eval_train = 1000
     args.dsa = False
     args.dc_aug_param = {
