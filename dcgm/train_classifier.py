@@ -21,7 +21,7 @@ def train_step(
 
         #! REMOVE THIS CODE BEFORE PRODUCTION
         if augment_flag:
-            images = augment(images, get_daparam('mnist', None, None, 1), device=device)
+            images = augment(images, get_daparam('MNIST', None, None, 1), device=device)
         
         #! END
 

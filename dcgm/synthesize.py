@@ -87,11 +87,11 @@ class DCGMSynthesizer:
                             )
                         )
                     )
+                    
                     # Compute real Gradients
                     inputs_real, labels_real = next(iter(dataloader_real))
                     inputs_real = inputs_real.to(self.device)
                     labels_real = labels_real.to(self.device)
-                    
                     loss_real = criterion(model(inputs_real), labels_real)
                     gw_real = torch.autograd.grad(loss_real, model_params)
                     gw_real = (gradients.detach() for gradients in gw_real)

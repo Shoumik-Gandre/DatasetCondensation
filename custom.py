@@ -1,4 +1,5 @@
 from pathlib import Path
+import time
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -9,6 +10,36 @@ from dcgm.model_init import HomogenousModelInitStrategy
 from dcgm.synthesize import DCGMHyperparameters, DCGMSynthesizer
 from dcgm.train_classifier import train_step, eval_step
 import fire
+
+from utils import epoch, get_daparam, get_time
+from argparse import Namespace
+
+
+def evaluate_synset(net, images_train, labels_train, testloader, args: Namespace):
+    net = net.to(args.device)
+    images_train = images_train.to(args.device)
+    labels_train = labels_train.to(args.device)
+    lr = float(args.lr_net)
+    Epoch = int(args.epoch_eval_train)
+    lr_schedule = [Epoch//2+1]
+    optimizer = torch.optim.SGD(net.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
+    criterion = nn.CrossEntropyLoss().to(args.device)
+
+    dst_train = TensorDataset(images_train, labels_train)
+    trainloader = DataLoader(dst_train, batch_size=args.batch_train, shuffle=True, num_workers=0)
+
+    start = time.time()
+    for ep in range(Epoch+1):
+        loss_train, acc_train = epoch('train', trainloader, net, optimizer, criterion, args, aug = True)
+        if ep in lr_schedule:
+            lr *= 0.1
+            optimizer = torch.optim.SGD(net.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
+
+    time_train = time.time() - start
+    loss_test, acc_test = epoch('test', testloader, net, optimizer, criterion, args, aug = False)
+    print(f'Evaluate: epoch = {Epoch} train time = {int(time_train)}s train loss = {loss_train :.6f} train acc = {acc_train:.4f}, test acc = {acc_test:.4f}')
+
+    return net, acc_train, acc_test
 
 
 def run(
@@ -84,12 +115,21 @@ def run(
     model = nn.DataParallel(model)
     model = model.to(device)
 
+    # args = Namespace()
+    # args.device = 'cuda'
+    # args.lr_net = 0.01
+    # args.batch_real = 256
+    # args.epoch_eval_train = 1000
+    # args.dsa = False
+    # args.dc_aug_param = get_daparam('MNIST', args.model, 'S', 1)
+
+    
     learning_rate = 0.01
 
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0005)
     # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[1000//2+1], gamma=0.1)
     lr_schedule = [1000//2+1]
-    for epoch in range(10+1):
+    for epoch in range(1000+1):
         train_step(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, device)
         if epoch in lr_schedule:
             learning_rate *= 0.1
