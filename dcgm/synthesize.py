@@ -219,11 +219,17 @@ def run(
     model = nn.DataParallel(model)
     model = model.to(device)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[1000//2+1], gamma=0.1)
-    for _ in range(1000):
+    learning_rate = 0.01
+
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0005)
+    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[1000//2+1], gamma=0.1)
+    lr_schedule = [1000//2+1]
+    for epoch in range(1000+1):
         train_step(model, nn.CrossEntropyLoss(), optimizer, train_dataloader, device)
-        scheduler.step()
+        if epoch in lr_schedule:
+            learning_rate *= 0.1
+            optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0005)
+        # scheduler.step()
 
     loss, acc = eval_step(model, nn.CrossEntropyLoss(), eval_dataloader, device)
     print(f"{loss = } {acc = }")
