@@ -181,7 +181,7 @@ def run(
     )
 
     hyperparams = DCGMHyperparameters(
-        iterations=1000, 
+        iterations=10, 
         outer_loops=1, 
         inner_loops=1, 
         batch_size=256, 
@@ -212,11 +212,10 @@ def run(
 
     dataset = TensorDataset(dataset.tensors[0].detach(), dataset.tensors[1].detach())
 
-    train_dataloader = DataLoader(dataset, 256, shuffle=True, num_workers=2)
-    eval_dataloader = DataLoader(eval_dataset, 256, num_workers=2)
+    train_dataloader = DataLoader(dataset, 256, shuffle=True)
+    eval_dataloader = DataLoader(eval_dataset, 256)
+    
     model = LeNet5(1, 10)
-    # optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-
     model = nn.DataParallel(model)
     model = model.to(device)
 
