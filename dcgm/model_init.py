@@ -15,7 +15,8 @@ class ModelInitStrategy(abc.ABC):
 
 @dataclass
 class HomogenousModelInitStrategy(ModelInitStrategy):
-    """Strategy to initalize the model"""
+    """Strategy to initalize one type of model"""
+
     model_class: Type[nn.Module]
     model_args: Mapping[str, Any]
     
