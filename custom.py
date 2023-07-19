@@ -124,9 +124,23 @@ def run(
     train_dataloader = DataLoader(dataset, 256, shuffle=True)
     eval_dataloader = DataLoader(eval_dataset, 256)
 
-    model_init = HomogenousModelInitStrategy(
-            model_class=ConvNet, 
-            model_args={
+    # model_init = HomogenousModelInitStrategy(
+    #         model_class=ConvNet, 
+    #         model_args={
+    #             'channel': 1, 
+    #             'num_classes': 10, 
+    #             'net_width': 128, 
+    #             'net_depth': 3, 
+    #             'net_act': 'relu', 
+    #             'net_norm': 'instancenorm', 
+    #             'net_pooling': 'avgpooling', 
+    #             'im_size': dimensions[1:]
+    #         }
+    # )
+
+    for i in range(5):
+        model = ConvNet(
+            **{
                 'channel': 1, 
                 'num_classes': 10, 
                 'net_width': 128, 
@@ -136,11 +150,8 @@ def run(
                 'net_pooling': 'avgpooling', 
                 'im_size': dimensions[1:]
             }
-    )
-
-    for i in range(5):
-        model = model_init.init()
-        # model = nn.DataParallel(model)
+        )
+        model = nn.DataParallel(model)
         model = model.to(device)
 
         args = Namespace()
