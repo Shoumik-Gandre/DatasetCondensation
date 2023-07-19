@@ -48,6 +48,7 @@ def run(
     Path(data_root).mkdir(parents=True, exist_ok=True)
     device = torch.device('cuda')
     dimensions = (1, 28, 28)
+    ipc = 10
     train_dataset = datasets.MNIST(
         # r'D:\USC\DeepUSC\project1\zskd baseline\Zero-shot_Knowledge_Distillation_Pytorch\data\real',
         data_root, 
@@ -85,13 +86,13 @@ def run(
         lr_dataset=0.1, 
         momentum_dataset=0.5, 
         lr_nn=0.01,
-        ipc=1,
+        ipc=ipc,
     )
 
     dataset_init_strategy = RandomStratifiedInitStrategy(
         dimensions=dimensions, 
         num_classes=10, 
-        ipc=1, 
+        ipc=ipc, 
         device=device
     )
 
