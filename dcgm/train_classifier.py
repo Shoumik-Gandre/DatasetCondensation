@@ -15,7 +15,7 @@ def train_step(
         lr_scheduler=None,
 ):
     model.train().to(device)
-    for i, (images, labels) in enumerate(pbar := tqdm(dataloader)):
+    for i, (images, labels) in enumerate(pbar := tqdm(dataloader, disable=True)):
         images = images.to(device)
         labels = labels.to(device)
 
