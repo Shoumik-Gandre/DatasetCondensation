@@ -111,7 +111,7 @@ def run(
                 'net_act': 'relu', 
                 'net_norm': 'instancenorm', 
                 'net_pooling': 'avgpooling', 
-                'im_size': dimensions[-1]
+                'im_size': dimensions[1:]
             }
         ),
         hyperparams=hyperparams
@@ -134,7 +134,7 @@ def run(
                 'net_act': 'relu', 
                 'net_norm': 'instancenorm', 
                 'net_pooling': 'avgpooling', 
-                'im_size': dimensions[-1]
+                'im_size': dimensions[1:]
             }
     )
 
