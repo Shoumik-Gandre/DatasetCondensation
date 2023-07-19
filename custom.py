@@ -78,7 +78,7 @@ def run(
     )
 
     hyperparams = DCGMHyperparameters(
-        iterations=1000, 
+        iterations=10, 
         outer_loops=1, 
         inner_loops=1, 
         batch_size=256, 
