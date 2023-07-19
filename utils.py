@@ -25,11 +25,14 @@ from networks import (
 def get_dataset(dataset, data_path):
     if dataset == 'MNIST':
         channel = 1
-        im_size = (32, 32)
+        im_size = (28, 28)
         num_classes = 10
         mean = [0.1307]
         std = [0.3081]
-        transform = transforms.Compose([transforms.Resize((32, 32)), transforms.ToTensor(), transforms.Normalize(mean=mean, std=std)])
+        transform = transforms.Compose([
+            # transforms.Resize((32, 32)), 
+            transforms.ToTensor(), 
+            transforms.Normalize(mean=mean, std=std)])
         dst_train = datasets.MNIST(data_path, train=True, download=True, transform=transform) # no augmentation
         dst_test = datasets.MNIST(data_path, train=False, download=True, transform=transform)
         class_names = [str(c) for c in range(num_classes)]
