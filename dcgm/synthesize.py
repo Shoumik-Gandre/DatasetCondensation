@@ -56,7 +56,7 @@ class DCGMSynthesizer:
         for iteration in tqdm(range(self.hyperparams.iterations), desc="iterations", position=0):
             
             # Initialize Model
-            model: nn.Module = self.model_init_strategy.init().to(self.device)  # TODO: write a function to assign a model
+            model: nn.Module = self.model_init_strategy.init().to(self.device)
             model_params = list(model.parameters())
             model_optimizer = torch.optim.SGD(model.parameters(), lr=self.hyperparams.lr_nn)
 
@@ -121,7 +121,7 @@ class DCGMSynthesizer:
                         labels_syn.detach()  # type: ignore
                     ),
                     batch_size=self.hyperparams.batch_size, 
-                    shuffle=True, num_workers=2
+                    shuffle=True, num_workers=0
                 )
                 
                 # Partial Optimization Loops for the Model
