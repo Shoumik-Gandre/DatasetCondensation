@@ -140,7 +140,7 @@ def run(
 
     for i in range(5):
         model = model_init.init()
-        model = nn.DataParallel(model)
+        # model = nn.DataParallel(model)
         model = model.to(device)
 
         args = Namespace()
