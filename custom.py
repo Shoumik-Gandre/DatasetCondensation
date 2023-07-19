@@ -80,14 +80,15 @@ def run(
 
     hyperparams = DCGMHyperparameters(
         iterations=1000, 
-        outer_loops=1, 
-        inner_loops=1, 
+        outer_loops=10, 
+        inner_loops=50, 
         batch_size=256, 
         lr_dataset=0.1, 
         momentum_dataset=0.5, 
         lr_nn=0.01,
         ipc=ipc,
     )
+    print(hyperparams)
 
     dataset_init_strategy = RandomStratifiedInitStrategy(
         dimensions=dimensions, 
