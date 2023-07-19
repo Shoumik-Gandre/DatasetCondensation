@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from torchvision import datasets, transforms
-from networks import LeNet5
+from networks import ConvNet
 from dcgm.init_strategy import RandomStratifiedInitStrategy
 from dcgm.model_init import HomogenousModelInitStrategy
 from dcgm.synthesize import DCGMHyperparameters, DCGMSynthesizer
@@ -101,8 +101,17 @@ def run(
         device=device,
         dataset_init_strategy=dataset_init_strategy,
         model_init_strategy=HomogenousModelInitStrategy(
-            model_class=LeNet5, 
-            model_args={'channel': 1, 'num_classes': 10}
+            model_class=ConvNet, 
+            model_args={
+                'channel': 1, 
+                'num_classes': 10, 
+                'net_width': 128, 
+                'net_depth': 3, 
+                'net_act': 'relu', 
+                'net_norm': 'instancenorm', 
+                'net_pooling': 'avgpooling', 
+                'im_size': 32
+            }
         ),
         hyperparams=hyperparams
     )
@@ -114,8 +123,22 @@ def run(
     train_dataloader = DataLoader(dataset, 256, shuffle=True)
     eval_dataloader = DataLoader(eval_dataset, 256)
 
+    model_init = HomogenousModelInitStrategy(
+            model_class=ConvNet, 
+            model_args={
+                'channel': 1, 
+                'num_classes': 10, 
+                'net_width': 128, 
+                'net_depth': 3, 
+                'net_act': 'relu', 
+                'net_norm': 'instancenorm', 
+                'net_pooling': 'avgpooling', 
+                'im_size': 32
+            }
+    )
+
     for i in range(5):
-        model = LeNet5(1, 10)
+        model = model_init.init()
         model = nn.DataParallel(model)
         model = model.to(device)
 
