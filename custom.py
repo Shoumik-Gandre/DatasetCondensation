@@ -91,7 +91,7 @@ def run(
     dataset_init_strategy = RandomStratifiedInitStrategy(
         dimensions=dimensions, 
         num_classes=10, 
-        ipc=10, 
+        ipc=1, 
         device=device
     )
 
@@ -111,7 +111,7 @@ def run(
                 'net_act': 'relu', 
                 'net_norm': 'instancenorm', 
                 'net_pooling': 'avgpooling', 
-                'im_size': 32
+                'im_size': dimensions[-1]
             }
         ),
         hyperparams=hyperparams
